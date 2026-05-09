@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, OffthreadVideo, Sequence, useVideoConfig } from "remotion";
 import { BRollOverlay } from "./BRollOverlay";
 import { Caption } from "./Caption";
+import { EmojiOverlay } from "./EmojiOverlay";
 import type { ShortVideoProps, Word } from "./types";
 import { getSpeakingSegments, remapTimestamp } from "./utils";
 
@@ -61,6 +62,7 @@ export const ShortVideo: React.FC<ShortVideoProps> = ({
       <BRollOverlay segments={brollSegments} />
 
       <Caption words={remappedWords} style={captionStyle} />
+      <EmojiOverlay words={remappedWords} />
     </AbsoluteFill>
   );
 };

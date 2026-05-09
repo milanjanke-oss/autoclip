@@ -4,6 +4,7 @@ export interface Word {
   endMs: number;
   timestampMs: number;
   confidence: number | null;
+  emoji?: string;
 }
 
 export interface CaptionStyle {

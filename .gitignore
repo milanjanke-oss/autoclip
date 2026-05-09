@@ -10,3 +10,6 @@ uploads/*/
 .DS_Store
 npm-debug.log*
 frontend/dist/
+
+# Local Netlify folder
+.netlify

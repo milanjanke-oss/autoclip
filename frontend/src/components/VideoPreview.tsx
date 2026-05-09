@@ -1,38 +1,140 @@
 import React, { useRef, useState } from "react";
+import type { CaptionStyle, CaptionVariant, Word } from "../types";
+
+interface Chunk {
+  words: Word[];
+  startMs: number;
+  endMs: number;
+}
+
+function chunkWords(words: Word[], n: number): Chunk[] {
+  const chunks: Chunk[] = [];
+  for (let i = 0; i < words.length; i += n) {
+    const g = words.slice(i, i + n);
+    chunks.push({ words: g, startMs: g[0].startMs, endMs: g[g.length - 1].endMs });
+  }
+  return chunks;
+}
+
+const POSITION_BOTTOM: Record<CaptionStyle["position"], string> = {
+  bottom: "12%", middle: "45%", top: "78%",
+};
+
+function isLightHex(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.58;
+}
+
+function getWordCSS(variant: CaptionVariant, isActive: boolean, wasSpoken: boolean, style: CaptionStyle): React.CSSProperties {
+  const fs = style.fontSize * 0.28;
+  const base: React.CSSProperties = { fontFamily: "system-ui, sans-serif", display: "inline-block", transition: "all 0.1s ease", fontSize: fs };
+
+  switch (variant) {
+    case "box":
+      return { ...base, fontWeight: 800, borderRadius: 6, padding: "1px 8px", lineHeight: 1.3,
+        background: isActive ? style.highlightColor : "rgba(0,0,0,0.45)",
+        color: isActive ? (isLightHex(style.highlightColor) ? "#111" : "#fff") : style.color,
+        opacity: wasSpoken ? 0.5 : 1, transform: isActive ? "scale(1.05)" : "scale(1)" };
+    case "outline":
+      return { ...base, fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.5px",
+        color: isActive ? style.highlightColor : style.color, opacity: wasSpoken ? 0.55 : 1,
+        WebkitTextStroke: "0.8px rgba(0,0,0,0.95)", transform: isActive ? "scale(1.06)" : "scale(1)" };
+    case "minimal":
+      return { ...base, fontWeight: 600, fontSize: fs * 0.72,
+        color: isActive ? "#fff" : style.color, opacity: isActive ? 1 : wasSpoken ? 0.35 : 0.65,
+        textShadow: "0 1px 4px rgba(0,0,0,0.8)" };
+    case "neon":
+      return { ...base, fontWeight: 800, textTransform: "uppercase", letterSpacing: "-0.5px",
+        color: isActive ? style.highlightColor : style.color, opacity: wasSpoken ? 0.4 : 1,
+        filter: isActive ? `drop-shadow(0 0 6px ${style.highlightColor})` : "none",
+        transform: isActive ? "scale(1.06)" : "scale(1)" };
+    default:
+      return { ...base, fontWeight: 800, textTransform: "uppercase", letterSpacing: "-0.5px",
+        color: isActive ? style.highlightColor : style.color, opacity: wasSpoken ? 0.55 : 1,
+        textShadow: "0 1px 6px rgba(0,0,0,0.9)", transform: isActive ? "scale(1.06)" : "scale(1)" };
+  }
+}
 
 interface Props {
   src: string;
-  onTimeUpdate?: (currentSec: number) => void;
+  words?: Word[];
+  captionStyle?: CaptionStyle;
 }
 
-export const VideoPreview: React.FC<Props> = ({ src, onTimeUpdate }) => {
+export const VideoPreview: React.FC<Props> = ({ src, words, captionStyle }) => {
   const ref = useRef<HTMLVideoElement>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [currentMs, setCurrentMs] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
   const handleTimeUpdate = () => {
-    if (ref.current && onTimeUpdate) {
-      onTimeUpdate(ref.current.currentTime);
-    }
+    if (ref.current) setCurrentMs(ref.current.currentTime * 1000);
   };
+
+  const variant: CaptionVariant = captionStyle?.variant ?? "classic";
+  const chunks = words && captionStyle ? chunkWords(words, captionStyle.wordsPerChunk) : [];
+  const activeChunk = chunks.find((c) => currentMs >= c.startMs && currentMs <= c.endMs + 200) ?? null;
 
   return (
     <div className="space-y-1">
       <button
-        onClick={() => setIsExpanded((v) => !v)}
-        className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+        onClick={() => setExpanded((v) => !v)}
+        className="text-xs transition-colors"
+        style={{ color: "var(--text-muted)" }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
       >
-        {isExpanded ? "▲ Video ausblenden" : "▼ Originalvideo anzeigen"}
+        {expanded ? "▲ Vorschau ausblenden" : "▼ Vorschau mit Captions"}
       </button>
 
-      {isExpanded && (
-        <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 max-h-[40vh]">
+      {expanded && (
+        <div className="relative rounded-xl overflow-hidden" style={{ background: "#000", border: "1px solid var(--border)" }}>
           <video
             ref={ref}
             src={src}
             controls
             onTimeUpdate={handleTimeUpdate}
-            className="w-full max-h-[40vh] object-contain"
-            style={{ display: "block" }}
+            className="w-full max-h-[55vw] object-contain block"
+            style={{ maxHeight: 380 }}
+          />
+
+          {/* Caption Overlay */}
+          {activeChunk && captionStyle && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: POSITION_BOTTOM[captionStyle.position],
+                left: 0,
+                right: 0,
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: variant === "box" ? "4px" : "6px",
+                padding: "0 5%",
+                pointerEvents: "none",
+              }}
+            >
+              {activeChunk.words.map((word, i) => {
+                const isActive = currentMs >= word.startMs && currentMs <= word.endMs;
+                const wasSpoken = currentMs > word.endMs;
+                return (
+                  <span key={i} style={getWordCSS(variant, isActive, wasSpoken, captionStyle)}>
+                    {variant === "box" || variant === "minimal" ? word.text : word.text.toUpperCase()}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Gradient overlay */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 25%, transparent 55%, rgba(0,0,0,0.65) 85%, rgba(0,0,0,0.85) 100%)",
+              pointerEvents: "none",
+            }}
           />
         </div>
       )}

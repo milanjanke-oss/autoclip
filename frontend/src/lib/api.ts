@@ -47,9 +47,11 @@ export async function getJobStatus(jobId: string): Promise<{
   return res.json();
 }
 
-export async function getTranscription(
-  jobId: string
-): Promise<{ captions: { text: string; words: unknown[] } }> {
+export async function getTranscription(jobId: string): Promise<{
+  status: string;
+  captions?: { text: string; words: import("../types").Word[] };
+  error?: string;
+}> {
   const res = await fetch(`${BASE}/transcribe/${jobId}`);
   if (!res.ok) throw new Error("Transkript nicht abrufbar");
   return res.json();

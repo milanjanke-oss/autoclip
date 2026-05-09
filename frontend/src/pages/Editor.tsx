@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { BRollPanel, type BRollSegment } from "../components/BRollPanel";
-import { CaptionStylePicker, type CaptionStyle } from "../components/CaptionStylePicker";
+import { CaptionStylePicker } from "../components/CaptionStylePicker";
 import { EditorHint } from "../components/EditorHint";
 import { VideoPreview } from "../components/VideoPreview";
 import { analyzeJob, getJobStatus, getTranscription, renderJob } from "../lib/api";
+import type { CaptionStyle, Word } from "../types";
 
 type Tab = "captions" | "brolls" | "settings";
 
@@ -20,6 +21,7 @@ const DEFAULT_STYLE: CaptionStyle = {
   fontSize: 78,
   position: "bottom",
   wordsPerChunk: 3,
+  variant: "classic",
 };
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -67,6 +69,7 @@ export const EditorPage: React.FC = () => {
   const [brollSegments, setBrollSegments] = useState<BRollSegment[]>([]);
   const [settings, setSettings] = useState<Settings>({ noiseDb: -40, minDuration: 0.5 });
   const [transcriptPreview, setTranscriptPreview] = useState<string>("");
+  const [captionWords, setCaptionWords] = useState<Word[]>([]);
   const [isRendering, setIsRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState<string>("Rendering...");
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -78,7 +81,10 @@ export const EditorPage: React.FC = () => {
   useEffect(() => {
     if (!jobId) return;
     getTranscription(jobId)
-      .then((d) => setTranscriptPreview(d.captions?.text ?? ""))
+      .then((d) => {
+        setTranscriptPreview(d.captions?.text ?? "");
+        setCaptionWords(d.captions?.words ?? []);
+      })
       .catch(() => {});
     getJobStatus(jobId)
       .then((s) => setVideoUrl(s.videoUrl ?? null))
@@ -186,8 +192,12 @@ export const EditorPage: React.FC = () => {
 
         {/* Video Preview */}
         {videoUrl && (
-          <div className="glass-surface overflow-hidden">
-            <VideoPreview src={videoUrl} />
+          <div className="glass-surface overflow-hidden p-4">
+            <VideoPreview
+              src={videoUrl}
+              words={captionWords}
+              captionStyle={captionStyle}
+            />
           </div>
         )}
 

@@ -7,12 +7,15 @@ export interface Word {
   emoji?: string;
 }
 
+export type CaptionVariant = "classic" | "box" | "outline" | "minimal" | "neon";
+
 export interface CaptionStyle {
   color: string;
   highlightColor: string;
   fontSize: number;
   position: "bottom" | "middle" | "top";
   wordsPerChunk: number;
+  variant?: CaptionVariant;
 }
 
 export interface CutPoint {

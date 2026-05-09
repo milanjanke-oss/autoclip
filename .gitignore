@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+uploads/*/
+*.mp4
+*.mov
+*.avi
+*.webm
+.DS_Store
+npm-debug.log*
+frontend/dist/

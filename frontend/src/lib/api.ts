@@ -1,0 +1,114 @@
+const BASE = (import.meta.env.VITE_BACKEND_URL as string) || "";
+
+export async function uploadVideo(
+  file: File,
+  language: "de" | "en"
+): Promise<{ jobId: string }> {
+  const form = new FormData();
+  form.append("video", file);
+  form.append("language", language);
+  const res = await fetch(`${BASE}/upload`, { method: "POST", body: form });
+  if (!res.ok) throw new Error("Upload fehlgeschlagen");
+  return res.json();
+}
+
+export async function analyzeJob(
+  jobId: string,
+  opts?: { noiseDb?: number; minDuration?: number }
+): Promise<void> {
+  const res = await fetch(`${BASE}/analyze/${jobId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts ?? {}),
+  });
+  if (!res.ok) throw new Error("Analyse fehlgeschlagen");
+}
+
+export async function transcribeJob(
+  jobId: string,
+  language: "de" | "en"
+): Promise<void> {
+  const res = await fetch(`${BASE}/transcribe/${jobId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language }),
+  });
+  if (!res.ok) throw new Error("Transkription fehlgeschlagen");
+}
+
+export async function getJobStatus(jobId: string): Promise<{
+  status: string;
+  error?: string;
+  videoUrl?: string;
+  outputPath?: string;
+}> {
+  const res = await fetch(`${BASE}/render/${jobId}/status`);
+  if (!res.ok) throw new Error("Status nicht abrufbar");
+  return res.json();
+}
+
+export async function getTranscription(
+  jobId: string
+): Promise<{ captions: { text: string; words: unknown[] } }> {
+  const res = await fetch(`${BASE}/transcribe/${jobId}`);
+  if (!res.ok) throw new Error("Transkript nicht abrufbar");
+  return res.json();
+}
+
+export async function renderJob(
+  jobId: string,
+  captionStyle: unknown,
+  brollSegments: unknown[]
+): Promise<{ outputPath: string }> {
+  const res = await fetch(`${BASE}/render/${jobId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ captionStyle, brollSegments }),
+  });
+  if (!res.ok) throw new Error("Rendering fehlgeschlagen");
+  return res.json();
+}
+
+export async function searchPexels(
+  jobId: string,
+  query: string
+): Promise<{ url: string; thumbnail: string }[]> {
+  const res = await fetch(
+    `/render/${jobId}/pexels?q=${encodeURIComponent(query)}`
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export interface JobSummary {
+  id: string;
+  status: string;
+  createdAt: number;
+  durationMs?: number;
+  error?: string;
+}
+
+export async function listJobs(): Promise<JobSummary[]> {
+  const res = await fetch("/jobs");
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export function pollJobStatus(
+  jobId: string,
+  onStatus: (s: string) => void,
+  intervalMs = 2000
+): () => void {
+  const id = setInterval(async () => {
+    try {
+      const data = await getJobStatus(jobId);
+      onStatus(data.status);
+      if (data.status === "done" || data.status === "error") {
+        clearInterval(id);
+      }
+    } catch {
+      clearInterval(id);
+    }
+  }, intervalMs);
+  return () => clearInterval(id);
+}

@@ -1,0 +1,37 @@
+export interface Word {
+  text: string;
+  startMs: number;
+  endMs: number;
+  timestampMs: number;
+  confidence: number | null;
+}
+
+export interface CaptionStyle {
+  color: string;
+  highlightColor: string;
+  fontSize: number;
+  position: "bottom" | "middle" | "top";
+  wordsPerChunk: number;
+}
+
+export interface CutPoint {
+  startMs: number;
+  endMs: number;
+}
+
+export interface BRollSegment {
+  startMs: number;
+  endMs: number;
+  pexelsQuery?: string;
+  userFilePath?: string;
+  resolvedVideoUrl?: string;
+}
+
+export interface ShortVideoProps {
+  videoSrc: string;
+  captions: { text: string; words: Word[] };
+  silenceSegments: CutPoint[];
+  brollSegments: BRollSegment[];
+  captionStyle: CaptionStyle;
+  durationMs: number;
+}

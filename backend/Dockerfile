@@ -15,5 +15,5 @@ COPY src ./src
 RUN npm run build
 
 RUN mkdir -p uploads
-EXPOSE 4000
+EXPOSE 10000
 CMD ["node", "dist/server.js"]

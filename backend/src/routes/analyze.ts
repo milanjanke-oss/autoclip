@@ -14,6 +14,7 @@ analyzeRouter.post("/:jobId", async (req, res) => {
   const noiseDb = parseFloat(req.body.noiseDb ?? "-40");
   const minDuration = parseFloat(req.body.minDuration ?? "0.5");
 
+  const prevStatus = job.status;
   jobStore.update(job.id, { status: "analyzing" });
 
   try {
@@ -22,7 +23,7 @@ analyzeRouter.post("/:jobId", async (req, res) => {
       noiseDb,
       minDuration
     );
-    jobStore.update(job.id, { silenceSegments, durationMs });
+    jobStore.update(job.id, { silenceSegments, durationMs, status: prevStatus });
     res.json({ silenceSegments, durationMs });
   } catch (err) {
     jobStore.update(job.id, { status: "error", error: String(err) });

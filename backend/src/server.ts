@@ -1,8 +1,11 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import path from "path";
+config({ path: path.join(__dirname, "../.env") });
 import cors from "cors";
 import express from "express";
 import fs from "fs";
 import { UPLOADS_DIR } from "./config";
+import { rm } from "fs/promises";
 import { analyzeRouter } from "./routes/analyze";
 import { renderRouter } from "./routes/render";
 import { transcribeRouter } from "./routes/transcribe";
@@ -31,6 +34,18 @@ app.get("/jobs", (_req, res) => {
     error,
   }));
   res.json(jobs);
+});
+
+app.delete("/jobs/:jobId", async (req, res) => {
+  const job = jobStore.get(req.params.jobId);
+  if (!job) {
+    res.status(404).json({ error: "Job nicht gefunden" });
+    return;
+  }
+  jobStore.delete(job.id);
+  const jobDir = path.join(UPLOADS_DIR, job.id);
+  await rm(jobDir, { recursive: true, force: true }).catch(() => {});
+  res.json({ ok: true });
 });
 
 app.use("/upload", uploadRouter);

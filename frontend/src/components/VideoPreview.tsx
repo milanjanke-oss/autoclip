@@ -1,6 +1,31 @@
 import React, { useRef, useState } from "react";
 import type { CaptionStyle, CaptionVariant, Word } from "../types";
 
+interface CutPoint { startMs: number; endMs: number; }
+
+function getSpeakingSegments(durationMs: number, silenceSegments: CutPoint[]): CutPoint[] {
+  const speaking: CutPoint[] = [];
+  let cursor = 0;
+  for (const silence of silenceSegments) {
+    if (silence.startMs > cursor) speaking.push({ startMs: cursor, endMs: silence.startMs });
+    cursor = silence.endMs;
+  }
+  if (cursor < durationMs) speaking.push({ startMs: cursor, endMs: durationMs });
+  return speaking;
+}
+
+function remapTimestamp(originalMs: number, speakingSegments: CutPoint[]): number {
+  let offset = 0;
+  for (const seg of speakingSegments) {
+    if (originalMs <= seg.endMs) {
+      if (originalMs >= seg.startMs) return offset + (originalMs - seg.startMs);
+      return offset;
+    }
+    offset += seg.endMs - seg.startMs;
+  }
+  return offset;
+}
+
 interface Chunk {
   words: Word[];
   startMs: number;
@@ -61,9 +86,11 @@ interface Props {
   src: string;
   words?: Word[];
   captionStyle?: CaptionStyle;
+  silenceSegments?: CutPoint[];
+  durationMs?: number;
 }
 
-export const VideoPreview: React.FC<Props> = ({ src, words, captionStyle }) => {
+export const VideoPreview: React.FC<Props> = ({ src, words, captionStyle, silenceSegments, durationMs }) => {
   const ref = useRef<HTMLVideoElement>(null);
   const [currentMs, setCurrentMs] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -73,7 +100,18 @@ export const VideoPreview: React.FC<Props> = ({ src, words, captionStyle }) => {
   };
 
   const variant: CaptionVariant = captionStyle?.variant ?? "classic";
-  const chunks = words && captionStyle ? chunkWords(words, captionStyle.wordsPerChunk) : [];
+
+  const remappedWords = React.useMemo(() => {
+    if (!words || !silenceSegments?.length || !durationMs) return words ?? [];
+    const speaking = getSpeakingSegments(durationMs, silenceSegments);
+    return words.map((w) => ({
+      ...w,
+      startMs: remapTimestamp(w.startMs, speaking),
+      endMs: remapTimestamp(w.endMs, speaking),
+    }));
+  }, [words, silenceSegments, durationMs]);
+
+  const chunks = remappedWords && captionStyle ? chunkWords(remappedWords, captionStyle.wordsPerChunk) : [];
   const activeChunk = chunks.find((c) => currentMs >= c.startMs && currentMs <= c.endMs + 200) ?? null;
 
   return (

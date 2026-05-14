@@ -7,12 +7,12 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      "/upload": "http://localhost:4000",
-      "/transcribe": "http://localhost:4000",
-      "/analyze": "http://localhost:4000",
-      "/render": "http://localhost:4000",
-      "/uploads": "http://localhost:4000",
-      "/jobs": "http://localhost:4000",
+      "/upload": { target: "http://localhost:4000", changeOrigin: true },
+      "/transcribe": { target: "http://localhost:4000", changeOrigin: true },
+      "/analyze": { target: "http://localhost:4000", changeOrigin: true },
+      "/render": { target: "http://localhost:4000", changeOrigin: true },
+      "/uploads": { target: "http://localhost:4000", changeOrigin: true },
+      "/jobs": { target: "http://localhost:4000", changeOrigin: true },
     },
   },
 });

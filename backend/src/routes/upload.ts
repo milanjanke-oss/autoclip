@@ -18,8 +18,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 1024 * 1024 * 1024 }, // 1 GB
   fileFilter: (_req, file, cb) => {
-    const allowed = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"];
-    cb(null, allowed.includes(file.mimetype));
+    cb(null, file.mimetype.startsWith("video/"));
   },
 });
 

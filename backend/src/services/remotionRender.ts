@@ -1,9 +1,11 @@
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import path from "path";
+import { UPLOADS_DIR } from "../config";
 import type { BRollSegment, CaptionStyle, CutPoint, Word } from "./jobStore";
 
 const REMOTION_ROOT = path.join(__dirname, "../../../remotion/src/index.ts");
+const BACKEND_PORT = process.env.PORT || 4000;
 
 export interface RenderInput {
   videoPath: string;
@@ -28,9 +30,8 @@ function getSpeakingDurationMs(durationMs: number, silenceSegments: CutPoint[]):
 }
 
 export async function renderShortVideo(input: RenderInput): Promise<void> {
-  const videoSrc = input.videoPath.startsWith("file://")
-    ? input.videoPath
-    : `file://${input.videoPath}`;
+  const relPath = path.relative(UPLOADS_DIR, input.videoPath).replace(/\\/g, "/");
+  const videoSrc = `http://localhost:${BACKEND_PORT}/uploads/${relPath}`;
 
   const outputDurationMs = getSpeakingDurationMs(input.durationMs, input.silenceSegments);
 

@@ -2,14 +2,27 @@ const BASE = (import.meta.env.VITE_BACKEND_URL as string) || "";
 
 export async function uploadVideo(
   file: File,
-  language: "de" | "en"
+  language: "de" | "en",
+  onProgress?: (pct: number) => void
 ): Promise<{ jobId: string }> {
-  const form = new FormData();
-  form.append("video", file);
-  form.append("language", language);
-  const res = await fetch(`${BASE}/upload`, { method: "POST", body: form });
-  if (!res.ok) throw new Error("Upload fehlgeschlagen");
-  return res.json();
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("video", file);
+    form.append("language", language);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BASE}/upload`);
+    if (onProgress) {
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      });
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+      else reject(new Error("Upload fehlgeschlagen"));
+    };
+    xhr.onerror = () => reject(new Error("Upload fehlgeschlagen"));
+    xhr.send(form);
+  });
 }
 
 export async function analyzeJob(
@@ -22,6 +35,15 @@ export async function analyzeJob(
     body: JSON.stringify(opts ?? {}),
   });
   if (!res.ok) throw new Error("Analyse fehlgeschlagen");
+}
+
+export async function getAnalysis(jobId: string): Promise<{
+  silenceSegments?: { startMs: number; endMs: number }[];
+  durationMs?: number;
+}> {
+  const res = await fetch(`${BASE}/analyze/${jobId}`);
+  if (!res.ok) return {};
+  return res.json();
 }
 
 export async function transcribeJob(
@@ -39,6 +61,7 @@ export async function transcribeJob(
 export async function getJobStatus(jobId: string): Promise<{
   status: string;
   error?: string;
+  language?: "de" | "en";
   videoUrl?: string;
   outputPath?: string;
 }> {
@@ -76,7 +99,7 @@ export async function searchPexels(
   query: string
 ): Promise<{ url: string; thumbnail: string }[]> {
   const res = await fetch(
-    `/render/${jobId}/pexels?q=${encodeURIComponent(query)}`
+    `${BASE}/render/${jobId}/pexels?q=${encodeURIComponent(query)}`
   );
   if (!res.ok) return [];
   return res.json();
@@ -91,9 +114,13 @@ export interface JobSummary {
 }
 
 export async function listJobs(): Promise<JobSummary[]> {
-  const res = await fetch("/jobs");
+  const res = await fetch(`${BASE}/jobs`);
   if (!res.ok) return [];
   return res.json();
+}
+
+export async function deleteJob(jobId: string): Promise<void> {
+  await fetch(`${BASE}/jobs/${jobId}`, { method: "DELETE" });
 }
 
 export function pollJobStatus(

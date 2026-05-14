@@ -121,4 +121,8 @@ export const jobStore = {
   list(): Job[] {
     return Array.from(jobs.values()).sort((a, b) => b.createdAt - a.createdAt);
   },
+
+  delete(id: string): boolean {
+    return jobs.delete(id);
+  },
 };

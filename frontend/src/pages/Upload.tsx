@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { VideoDropzone } from "../components/VideoDropzone";
-import { analyzeJob, listJobs, transcribeJob, uploadVideo, type JobSummary } from "../lib/api";
+import { analyzeJob, deleteJob, listJobs, transcribeJob, uploadVideo, type JobSummary } from "../lib/api";
 
 type Step = "idle" | "uploading" | "analyzing" | "transcribing" | "done" | "error";
 
@@ -53,6 +53,7 @@ export const UploadPage: React.FC = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState<"de" | "en">("de");
   const [step, setStep] = useState<Step>("idle");
+  const [uploadPct, setUploadPct] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [recentJobs, setRecentJobs] = useState<JobSummary[]>([]);
 
@@ -62,9 +63,10 @@ export const UploadPage: React.FC = () => {
 
   const handleFile = async (file: File) => {
     setError(null);
+    setUploadPct(0);
     try {
       setStep("uploading");
-      const { jobId } = await uploadVideo(file, language);
+      const { jobId } = await uploadVideo(file, language, setUploadPct);
 
       setStep("analyzing");
       await analyzeJob(jobId);
@@ -78,6 +80,13 @@ export const UploadPage: React.FC = () => {
       setStep("error");
       setError(String(err));
     }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, jobId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await deleteJob(jobId);
+    setRecentJobs((prev) => prev.filter((j) => j.id !== jobId));
   };
 
   const isLoading = step !== "idle" && step !== "error";
@@ -169,7 +178,7 @@ export const UploadPage: React.FC = () => {
         <AnimatePresence>
           {isLoading && (
             <motion.div
-              className="mt-8 glass-surface p-5"
+              className="mt-8 glass-surface p-5 space-y-4"
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -230,6 +239,31 @@ export const UploadPage: React.FC = () => {
                   );
                 })}
               </div>
+
+              {/* Upload Progress Bar */}
+              <AnimatePresence>
+                {step === "uploading" && uploadPct > 0 && uploadPct < 100 && (
+                  <motion.div
+                    className="space-y-1.5"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <div className="flex justify-between">
+                      <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>Upload</span>
+                      <span className="text-[10px] font-mono" style={{ color: "var(--accent)" }}>{uploadPct}%</span>
+                    </div>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: "var(--accent)" }}
+                        animate={{ width: `${uploadPct}%` }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
@@ -274,11 +308,13 @@ export const UploadPage: React.FC = () => {
                   key={job.id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
                   transition={{ delay: idx * 0.06, duration: 0.3 }}
+                  className="group relative"
                 >
                   <Link
                     to={`/editor/${job.id}`}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group"
+                    className="flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200"
                     style={{
                       background: "rgba(255,255,255,0.6)",
                       border: "1px solid var(--border)",
@@ -317,9 +353,23 @@ export const UploadPage: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <span className="text-xs shrink-0 ml-3 font-mono" style={{ color: "var(--text-muted)" }}>
-                      {formatAge(job.createdAt)}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+                        {formatAge(job.createdAt)}
+                      </span>
+                      <button
+                        onClick={(e) => handleDelete(e, job.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded-md"
+                        style={{ color: "var(--text-muted)" }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--error)")}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text-muted)")}
+                        title="Job löschen"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
                   </Link>
                 </motion.div>
               ))}

@@ -98,6 +98,7 @@ renderRouter.get("/:jobId/status", (req, res) => {
   res.json({
     status: job.status,
     error: job.error,
+    language: job.language,
     videoUrl: `/uploads/${relativeVideoPath}`,
     outputPath: job.status === "done" ? `/uploads/${job.id}/output.mp4` : undefined,
   });

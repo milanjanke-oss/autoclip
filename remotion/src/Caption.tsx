@@ -23,6 +23,14 @@ function chunkWords(words: Word[], n: number): Chunk[] {
   return chunks;
 }
 
+// Skaliert fontSize runter wenn ein Wort zu breit für den Container wäre.
+// Verfügbare Breite: 1080px - 2×48px Padding = 984px, Zeichenbreite ≈ fontSize × 0.62
+function getChunkFontSize(chunk: Chunk, baseFontSize: number): number {
+  const maxLen = Math.max(...chunk.words.map((w) => w.text.replace(/[.,!?:;]/g, "").length));
+  const maxFit = Math.floor(984 / (maxLen * 0.62));
+  return Math.min(baseFontSize, Math.max(42, maxFit));
+}
+
 const POSITION_BOTTOM: Record<CaptionStyle["position"], string> = {
   bottom: "10%",
   middle: "45%",
@@ -142,6 +150,9 @@ export const Caption: React.FC<CaptionProps> = ({ words, style }) => {
 
   if (!activeChunk) return null;
 
+  const dynamicFontSize = getChunkFontSize(activeChunk, style.fontSize);
+  const activeStyle = { ...style, fontSize: dynamicFontSize };
+
   const bottomValue = POSITION_BOTTOM[style.position];
   const isBox = variant === "box";
 
@@ -176,7 +187,7 @@ export const Caption: React.FC<CaptionProps> = ({ words, style }) => {
             : 1;
 
         return (
-          <span key={i} style={getWordStyle(variant, isActive, wasSpoken, scale, style)}>
+          <span key={i} style={getWordStyle(variant, isActive, wasSpoken, scale, activeStyle)}>
             {isBox ? word.text : word.text.toUpperCase()}
           </span>
         );

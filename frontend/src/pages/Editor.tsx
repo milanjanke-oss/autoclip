@@ -5,7 +5,7 @@ import { BRollPanel, type BRollSegment } from "../components/BRollPanel";
 import { CaptionStylePicker } from "../components/CaptionStylePicker";
 import { EditorHint } from "../components/EditorHint";
 import { VideoPreview } from "../components/VideoPreview";
-import { analyzeJob, getJobStatus, getTranscription, renderJob } from "../lib/api";
+import { analyzeJob, getAnalysis, getJobStatus, getTranscription, renderJob, transcribeJob } from "../lib/api";
 import type { CaptionStyle, Word } from "../types";
 
 type Tab = "captions" | "brolls" | "settings";
@@ -77,6 +77,10 @@ export const EditorPage: React.FC = () => {
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [reanalyzeMsg, setReanalyzeMsg] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [silenceSegments, setSilenceSegments] = useState<{ startMs: number; endMs: number }[]>([]);
+  const [durationMs, setDurationMs] = useState<number | undefined>(undefined);
+  const [jobLanguage, setJobLanguage] = useState<"de" | "en">("de");
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     if (!jobId) return;
@@ -87,7 +91,17 @@ export const EditorPage: React.FC = () => {
       })
       .catch(() => {});
     getJobStatus(jobId)
-      .then((s) => setVideoUrl(s.videoUrl ?? null))
+      .then((s) => {
+        setVideoUrl(s.videoUrl ?? null);
+        if (s.language) setJobLanguage(s.language);
+        if (s.outputPath) setDownloadUrl(s.outputPath);
+      })
+      .catch(() => {});
+    getAnalysis(jobId)
+      .then((a) => {
+        if (a.silenceSegments) setSilenceSegments(a.silenceSegments);
+        if (a.durationMs) setDurationMs(a.durationMs);
+      })
       .catch(() => {});
   }, [jobId]);
 
@@ -97,11 +111,30 @@ export const EditorPage: React.FC = () => {
     setReanalyzeMsg(null);
     try {
       await analyzeJob(jobId, { noiseDb: settings.noiseDb, minDuration: settings.minDuration });
+      const analysis = await getAnalysis(jobId);
+      if (analysis.silenceSegments) setSilenceSegments(analysis.silenceSegments);
+      if (analysis.durationMs) setDurationMs(analysis.durationMs);
       setReanalyzeMsg("Analyse aktualisiert.");
     } catch {
       setReanalyzeMsg("Fehler beim Neuanalysieren.");
     } finally {
       setIsReanalyzing(false);
+    }
+  };
+
+  const handleRetryTranscription = async () => {
+    if (!jobId) return;
+    setIsRetrying(true);
+    setError(null);
+    try {
+      await transcribeJob(jobId, jobLanguage);
+      const d = await getTranscription(jobId);
+      setTranscriptPreview(d.captions?.text ?? "");
+      setCaptionWords(d.captions?.words ?? []);
+    } catch {
+      setError("Transkription erneut fehlgeschlagen.");
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -197,8 +230,31 @@ export const EditorPage: React.FC = () => {
               src={videoUrl}
               words={captionWords}
               captionStyle={captionStyle}
+              silenceSegments={silenceSegments}
+              durationMs={durationMs}
             />
           </div>
+        )}
+
+        {/* Retry Transkription */}
+        {!transcriptPreview && (
+          <motion.div
+            className="rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+            style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.25)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              Kein Transkript vorhanden.
+            </span>
+            <button
+              onClick={handleRetryTranscription}
+              disabled={isRetrying}
+              className="btn-secondary px-3 py-1.5 text-xs shrink-0"
+            >
+              {isRetrying ? "Läuft..." : "Erneut versuchen"}
+            </button>
+          </motion.div>
         )}
 
         {/* Transcript */}

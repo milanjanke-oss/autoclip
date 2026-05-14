@@ -17,7 +17,7 @@ export const VideoDropzone: React.FC<Props> = ({ onFile, disabled }) => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "video/*": [".mp4", ".mov", ".avi", ".webm"] },
+    accept: { "video/*": [".mp4", ".mov", ".avi", ".webm", ".m4v"] },
     maxFiles: 1,
     disabled,
   });

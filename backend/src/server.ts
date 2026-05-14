@@ -18,7 +18,21 @@ const PORT = process.env.PORT || 4000;
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 jobStore.init(UPLOADS_DIR);
 
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000" }));
+const ALLOWED_ORIGINS = [
+  "https://autoclip-dlmj.netlify.app",
+  process.env.FRONTEND_URL,
+  "http://localhost:3000",
+].filter(Boolean) as string[];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error("CORS: Origin nicht erlaubt"));
+    }
+  },
+}));
 app.use(express.json());
 
 app.use("/uploads", express.static(UPLOADS_DIR));

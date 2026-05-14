@@ -5,6 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    host: true,
     port: 3000,
     proxy: {
       "/upload": { target: "http://localhost:4000", changeOrigin: true },

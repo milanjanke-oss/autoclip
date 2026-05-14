@@ -18,9 +18,13 @@ export async function uploadVideo(
     }
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-      else reject(new Error("Upload fehlgeschlagen"));
+      else {
+        let detail = "";
+        try { detail = ` (${JSON.parse(xhr.responseText).error})`; } catch {}
+        reject(new Error(`Upload fehlgeschlagen${detail} [${xhr.status}]`));
+      }
     };
-    xhr.onerror = () => reject(new Error("Upload fehlgeschlagen"));
+    xhr.onerror = () => reject(new Error("Upload fehlgeschlagen – Backend nicht erreichbar"));
     xhr.send(form);
   });
 }

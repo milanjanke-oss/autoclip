@@ -18,9 +18,10 @@ const upload = multer({
   storage,
   limits: { fileSize: 1024 * 1024 * 1024 }, // 1 GB
   fileFilter: (_req, file, cb) => {
-    const validMime = file.mimetype.startsWith("video/") || file.mimetype === "application/octet-stream";
+    // Gültige Video-Endung ist Pflicht; MIME zusätzlich video/* oder octet-stream (iOS .mov/HEVC).
     const validExt = /\.(mp4|mov|avi|webm|m4v|hevc)$/i.test(file.originalname);
-    cb(null, validMime || validExt);
+    const validMime = file.mimetype.startsWith("video/") || file.mimetype === "application/octet-stream";
+    cb(null, validExt && validMime);
   },
 });
 

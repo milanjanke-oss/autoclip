@@ -1,0 +1,7 @@
+{
+	email milanjanke@dlmj.de
+}
+
+autoclip.dlmj.de {
+	reverse_proxy frontend:80
+}

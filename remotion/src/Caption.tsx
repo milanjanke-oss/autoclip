@@ -1,12 +1,29 @@
-import { loadFont } from "@remotion/google-fonts/Montserrat";
+import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
+import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
+import { loadFont as loadBebasNeue } from "@remotion/google-fonts/BebasNeue";
+import { loadFont as loadPoppins } from "@remotion/google-fonts/Poppins";
+import { loadFont as loadOswald } from "@remotion/google-fonts/Oswald";
 import React from "react";
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { CaptionStyle, CaptionVariant, Word } from "./types";
 
-const { fontFamily: sans } = loadFont("normal", {
-  weights: ["600", "700", "800", "900"],
-  subsets: ["latin"],
-});
+const { fontFamily: montserrat } = loadMontserrat("normal", { weights: ["600", "700", "800", "900"], subsets: ["latin"] });
+const { fontFamily: anton } = loadAnton("normal", { weights: ["400"], subsets: ["latin"] });
+const { fontFamily: bebasNeue } = loadBebasNeue("normal", { weights: ["400"], subsets: ["latin"] });
+const { fontFamily: poppins } = loadPoppins("normal", { weights: ["600", "700", "800"], subsets: ["latin"] });
+const { fontFamily: oswald } = loadOswald("normal", { weights: ["500", "600", "700"], subsets: ["latin"] });
+
+const FONT_MAP: Record<string, string> = {
+  Montserrat: montserrat,
+  Anton: anton,
+  "Bebas Neue": bebasNeue,
+  Poppins: poppins,
+  Oswald: oswald,
+};
+
+function resolveFont(name?: string): string {
+  return FONT_MAP[name ?? "Montserrat"] ?? montserrat;
+}
 
 interface Chunk {
   words: Word[];
@@ -44,6 +61,20 @@ function isLightHex(hex: string): boolean {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.58;
 }
 
+// Typografie pro Stil (ohne Farb-/Highlight-Logik — die kommt aus dem highlightMode).
+function getVariantTypography(variant: CaptionVariant, fontSize: number): React.CSSProperties {
+  switch (variant) {
+    case "box":
+      return { fontSize, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.15, borderRadius: 12, padding: "2px 14px" };
+    case "minimal":
+      return { fontSize: Math.round(fontSize * 0.72), fontWeight: 600, letterSpacing: "0px", lineHeight: 1.3 };
+    case "outline":
+    case "neon":
+    default:
+      return { fontSize, fontWeight: variant === "outline" ? 900 : 800, letterSpacing: "-1.5px", lineHeight: 1.1, textTransform: "uppercase" };
+  }
+}
+
 function getWordStyle(
   variant: CaptionVariant,
   isActive: boolean,
@@ -52,21 +83,35 @@ function getWordStyle(
   style: CaptionStyle
 ): React.CSSProperties {
   const base: React.CSSProperties = {
-    fontFamily: sans,
+    fontFamily: resolveFont(style.fontFamily),
     display: "inline-block",
     transformOrigin: "center bottom",
+    ...getVariantTypography(variant, style.fontSize),
   };
 
+  const mode = style.highlightMode ?? "color";
+
+  // ── Umrandung: aktives Wort wird umrandet statt eingefärbt ──
+  if (mode === "outline") {
+    const strokeColor = style.strokeColor ?? "#000000";
+    const strokeWidth = style.strokeWidth ?? 3;
+    return {
+      ...base,
+      color: style.color,
+      WebkitTextStroke: `${isActive ? strokeWidth + 1 : strokeWidth}px ${strokeColor}`,
+      paintOrder: "stroke fill",
+      opacity: wasSpoken ? 0.55 : 1,
+      transform: `scale(${variant === "box" || variant === "minimal" ? (isActive ? 1.04 : 1) : scale})`,
+      ...(variant === "box" ? { background: "rgba(0,0,0,0.45)" } : {}),
+      textShadow: variant === "box" ? "none" : "0 2px 10px rgba(0,0,0,0.7)",
+    };
+  }
+
+  // ── Farbe: bisheriges Highlight-Verhalten pro Stil ──
   switch (variant) {
     case "box":
       return {
         ...base,
-        fontSize: style.fontSize,
-        fontWeight: 800,
-        letterSpacing: "-1px",
-        lineHeight: 1.15,
-        borderRadius: 12,
-        padding: "2px 14px",
         background: isActive ? style.highlightColor : "rgba(0,0,0,0.45)",
         color: isActive ? (isLightHex(style.highlightColor) ? "#111" : "#fff") : style.color,
         opacity: wasSpoken ? 0.5 : 1,
@@ -77,11 +122,6 @@ function getWordStyle(
     case "outline":
       return {
         ...base,
-        fontSize: style.fontSize,
-        fontWeight: 900,
-        letterSpacing: "-1.5px",
-        lineHeight: 1.1,
-        textTransform: "uppercase",
         color: isActive ? style.highlightColor : style.color,
         WebkitTextStroke: isActive ? `3px rgba(0,0,0,0.95)` : `2px rgba(0,0,0,0.8)`,
         opacity: wasSpoken ? 0.55 : 1,
@@ -92,10 +132,6 @@ function getWordStyle(
     case "minimal":
       return {
         ...base,
-        fontSize: Math.round(style.fontSize * 0.72),
-        fontWeight: 600,
-        letterSpacing: "0px",
-        lineHeight: 1.3,
         color: isActive ? "#ffffff" : style.color,
         opacity: isActive ? 1 : wasSpoken ? 0.35 : 0.65,
         textShadow: "0 1px 6px rgba(0,0,0,0.8)",
@@ -105,11 +141,6 @@ function getWordStyle(
     case "neon":
       return {
         ...base,
-        fontSize: style.fontSize,
-        fontWeight: 800,
-        letterSpacing: "-1.5px",
-        lineHeight: 1.1,
-        textTransform: "uppercase",
         color: isActive ? style.highlightColor : style.color,
         opacity: wasSpoken ? 0.4 : 1,
         transform: `scale(${scale})`,
@@ -121,11 +152,6 @@ function getWordStyle(
     default: // classic
       return {
         ...base,
-        fontSize: style.fontSize,
-        fontWeight: 800,
-        letterSpacing: "-1.5px",
-        lineHeight: 1.1,
-        textTransform: "uppercase",
         color: isActive ? style.highlightColor : style.color,
         opacity: wasSpoken ? 0.55 : 1,
         transform: `scale(${scale})`,

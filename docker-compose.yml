@@ -1,21 +1,25 @@
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     env_file: .env
-    ports:
-      - "4000:4000"
+    # Kein Host-Port: Backend ist nur intern im Docker-Netz erreichbar (frontend-nginx proxyt → backend:4000).
+    expose:
+      - "4000"
     volumes:
-      - uploads:/app/uploads
+      - uploads:/app/backend/uploads
+    shm_size: "1gb"
+    mem_limit: "3g"
     restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "3000:80"
+    # Host-Port kommt aus docker-compose.prod.yml (80 bzw. 8080 hinter Caddy).
+    expose:
+      - "80"
     depends_on:
       - backend
     restart: unless-stopped

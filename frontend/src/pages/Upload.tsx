@@ -359,7 +359,7 @@ export const UploadPage: React.FC = () => {
                       </span>
                       <button
                         onClick={(e) => handleDelete(e, job.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded-md"
+                        className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded-md"
                         style={{ color: "var(--text-muted)" }}
                         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--error)")}
                         onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text-muted)")}

@@ -22,6 +22,10 @@ const DEFAULT_STYLE: CaptionStyle = {
   position: "bottom",
   wordsPerChunk: 3,
   variant: "classic",
+  fontFamily: "Montserrat",
+  highlightMode: "color",
+  strokeColor: "#000000",
+  strokeWidth: 3,
 };
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [

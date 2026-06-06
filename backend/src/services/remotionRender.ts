@@ -4,7 +4,8 @@ import path from "path";
 import { UPLOADS_DIR } from "../config";
 import type { BRollSegment, CaptionStyle, CutPoint, Word } from "./jobStore";
 
-const REMOTION_ROOT = path.join(__dirname, "../../../remotion/src/index.ts");
+const REMOTION_ROOT =
+  process.env.REMOTION_ENTRY || path.join(__dirname, "../../../remotion/src/index.ts");
 const BACKEND_PORT = process.env.PORT || 4000;
 
 export interface RenderInput {
@@ -31,7 +32,10 @@ function getSpeakingDurationMs(durationMs: number, silenceSegments: CutPoint[]):
 
 export async function renderShortVideo(input: RenderInput): Promise<void> {
   const relPath = path.relative(UPLOADS_DIR, input.videoPath).replace(/\\/g, "/");
-  const videoSrc = `http://localhost:${BACKEND_PORT}/uploads/${relPath}`;
+  // Chromium lädt das Video vom selben Server. 127.0.0.1 statt localhost (vermeidet IPv6-Probleme);
+  // per INTERNAL_BASE_URL überschreibbar, falls Rendering später ausgelagert wird.
+  const internalBase = process.env.INTERNAL_BASE_URL || `http://127.0.0.1:${BACKEND_PORT}`;
+  const videoSrc = `${internalBase}/uploads/${relPath}`;
 
   const outputDurationMs = getSpeakingDurationMs(input.durationMs, input.silenceSegments);
 
@@ -64,5 +68,7 @@ export async function renderShortVideo(input: RenderInput): Promise<void> {
     codec: "h264",
     outputLocation: input.outputPath,
     inputProps,
+    concurrency: 1,
+    chromiumOptions: { gl: "swiftshader" },
   });
 }

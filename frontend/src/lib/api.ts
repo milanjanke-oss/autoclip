@@ -1,3 +1,5 @@
+import { authHeaders, handleUnauthorized } from "./auth";
+
 const BASE = (import.meta.env.VITE_BACKEND_URL as string) || "";
 
 export async function uploadVideo(
@@ -11,6 +13,8 @@ export async function uploadVideo(
     form.append("language", language);
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${BASE}/upload`);
+    const code = authHeaders()["X-Access-Code"];
+    if (code) xhr.setRequestHeader("X-Access-Code", code);
     if (onProgress) {
       xhr.upload.addEventListener("progress", (e) => {
         if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
@@ -18,6 +22,7 @@ export async function uploadVideo(
     }
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+      else if (xhr.status === 401) { handleUnauthorized(); reject(new Error("Zugangscode ungültig")); }
       else {
         let detail = "";
         try { detail = ` (${JSON.parse(xhr.responseText).error})`; } catch {}
@@ -35,9 +40,10 @@ export async function analyzeJob(
 ): Promise<void> {
   const res = await fetch(`${BASE}/analyze/${jobId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(opts ?? {}),
   });
+  if (res.status === 401) return handleUnauthorized();
   if (!res.ok) throw new Error("Analyse fehlgeschlagen");
 }
 
@@ -56,9 +62,10 @@ export async function transcribeJob(
 ): Promise<void> {
   const res = await fetch(`${BASE}/transcribe/${jobId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ language }),
   });
+  if (res.status === 401) return handleUnauthorized();
   if (!res.ok) throw new Error("Transkription fehlgeschlagen");
 }
 
@@ -91,9 +98,10 @@ export async function renderJob(
 ): Promise<{ outputPath: string }> {
   const res = await fetch(`${BASE}/render/${jobId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ captionStyle, brollSegments }),
   });
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Zugangscode ungültig"); }
   if (!res.ok) throw new Error("Rendering fehlgeschlagen");
   return res.json();
 }
@@ -124,7 +132,8 @@ export async function listJobs(): Promise<JobSummary[]> {
 }
 
 export async function deleteJob(jobId: string): Promise<void> {
-  await fetch(`${BASE}/jobs/${jobId}`, { method: "DELETE" });
+  const res = await fetch(`${BASE}/jobs/${jobId}`, { method: "DELETE", headers: { ...authHeaders() } });
+  if (res.status === 401) handleUnauthorized();
 }
 
 export function pollJobStatus(

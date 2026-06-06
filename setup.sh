@@ -29,13 +29,16 @@ if [ ! -f ".env" ]; then
   echo ">> .env wird erstellt..."
   read -p "Groq API Key (gsk_...): " GROQ_KEY
   read -p "Pexels API Key (optional, Enter zum Ueberspringen): " PEXELS_KEY
+  read -p "Zugangscode fuer die App (schuetzt vor fremdem Zugriff): " ACCESS
   SERVER_IP=$(curl -s ifconfig.me)
 
   cat > .env << EOF
 GROQ_API_KEY=${GROQ_KEY}
 PEXELS_API_KEY=${PEXELS_KEY}
+ACCESS_CODE=${ACCESS}
 FRONTEND_URL=http://${SERVER_IP}
 PORT=4000
+NODE_ENV=production
 EOF
   echo ">> .env erstellt (Server-IP: ${SERVER_IP})"
 else

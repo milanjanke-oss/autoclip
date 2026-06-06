@@ -9,11 +9,17 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
-COPY package.json tsconfig.json ./
-RUN npm install
-COPY src ./src
-RUN npm run build
 
-RUN mkdir -p uploads
-EXPOSE 10000
-CMD ["node", "dist/server.js"]
+# Manifeste zuerst → Docker-Layer-Cache für npm ci (Build-Context = Repo-Root)
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/package.json
+COPY remotion/package.json ./remotion/package.json
+RUN npm ci --workspace=backend --workspace=remotion --include-workspace-root
+
+COPY backend ./backend
+COPY remotion ./remotion
+RUN npm run build --workspace=backend
+
+RUN mkdir -p /app/backend/uploads
+EXPOSE 4000
+CMD ["node", "backend/dist/server.js"]

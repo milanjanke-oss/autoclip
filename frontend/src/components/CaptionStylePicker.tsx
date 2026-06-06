@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import type { CaptionStyle, CaptionVariant } from "../types";
+import { FONT_OPTIONS, fontCss } from "../lib/fonts";
 
 export type { CaptionStyle };
 
@@ -44,12 +45,12 @@ const PRESETS: StylePreset[] = [
   },
 ];
 
-function PreviewCard({ preset, active, onClick }: { preset: StylePreset; active: boolean; onClick: () => void }) {
+function PreviewCard({ preset, active, fontFamily, onClick }: { preset: StylePreset; active: boolean; fontFamily?: string; onClick: () => void }) {
   const { variant, style } = preset;
 
   const wordStyle = (highlight: boolean): React.CSSProperties => {
     const base: React.CSSProperties = {
-      fontFamily: "system-ui, sans-serif",
+      fontFamily: fontCss(fontFamily),
       fontWeight: 900,
       letterSpacing: "-0.5px",
       display: "inline-block",
@@ -150,11 +151,91 @@ export const CaptionStylePicker: React.FC<Props> = ({ value, onChange }) => {
               key={p.variant}
               preset={p}
               active={activeVariant === p.variant}
+              fontFamily={value.fontFamily}
               onClick={() => onChange({ ...value, ...p.style })}
             />
           ))}
         </div>
       </div>
+
+      {/* Schriftart */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest font-mono" style={{ color: "var(--text-muted)" }}>
+          Schriftart
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {FONT_OPTIONS.map((font) => {
+            const active = (value.fontFamily ?? "Montserrat") === font;
+            return (
+              <button
+                key={font}
+                onClick={() => onChange({ ...value, fontFamily: font })}
+                className="py-2 px-1 rounded-xl text-sm leading-tight transition-all"
+                style={{
+                  fontFamily: fontCss(font),
+                  background: active ? "var(--accent-light)" : "rgba(255,255,255,0.6)",
+                  color: active ? "var(--accent)" : "var(--text-secondary)",
+                  border: active ? "2px solid var(--accent)" : "1px solid var(--border)",
+                }}
+              >
+                {font}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Highlight-Modus: Farbe oder Umrandung */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Wort-Hervorhebung</p>
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.6)", border: "1px solid var(--border)" }}>
+          {([
+            { mode: "color", label: "Farbe" },
+            { mode: "outline", label: "Umrandung" },
+          ] as const).map(({ mode, label }) => {
+            const active = (value.highlightMode ?? "color") === mode;
+            return (
+              <button
+                key={mode}
+                onClick={() => onChange({ ...value, highlightMode: mode })}
+                className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                style={{
+                  background: active ? "white" : "transparent",
+                  color: active ? "var(--accent)" : "var(--text-muted)",
+                  border: active ? "1px solid var(--border-strong)" : "1px solid transparent",
+                  boxShadow: active ? "0 1px 4px rgba(37,99,235,0.1)" : "none",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Rand-Optionen (nur bei Umrandung) */}
+      {(value.highlightMode ?? "color") === "outline" && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Rand-Farbe</p>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.6)", border: "1px solid var(--border)" }}>
+              <div className="relative w-7 h-7 shrink-0">
+                <input type="color" value={(value.strokeColor ?? "#000000").slice(0, 7)} onChange={(e) => onChange({ ...value, strokeColor: e.target.value })} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                <div className="w-7 h-7 rounded-lg pointer-events-none" style={{ background: value.strokeColor ?? "#000000", border: "2px solid rgba(0,0,0,0.1)", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }} />
+              </div>
+              <span className="text-xs font-mono" style={{ color: "var(--text-secondary)" }}>{(value.strokeColor ?? "#000000").slice(0, 7)}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Rand-Dicke</p>
+              <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--accent-light)", color: "var(--accent)" }}>{value.strokeWidth ?? 3}px</span>
+            </div>
+            <input type="range" min={1} max={8} value={value.strokeWidth ?? 3} onChange={(e) => onChange({ ...value, strokeWidth: Number(e.target.value) })} className="w-full" />
+          </div>
+        </div>
+      )}
 
       {/* Color Controls */}
       <div className="grid grid-cols-2 gap-4">

@@ -14,6 +14,11 @@ const DEFAULT_CAPTION_STYLE: CaptionStyle = {
   fontSize: 78,
   position: "bottom",
   wordsPerChunk: 3,
+  variant: "classic",
+  fontFamily: "Montserrat",
+  highlightMode: "color",
+  strokeColor: "#000000",
+  strokeWidth: 3,
 };
 
 const ALLOWED_BROLL_HOSTS = /^https:\/\/(?!(?:localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|169\.254\.\d+\.\d+))/i;

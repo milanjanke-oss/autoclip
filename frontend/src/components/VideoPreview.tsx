@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import type { CaptionStyle, CaptionVariant, Word } from "../types";
+import { fontCss } from "../lib/fonts";
 
 interface CutPoint { startMs: number; endMs: number; }
 
@@ -54,7 +55,28 @@ function isLightHex(hex: string): boolean {
 
 function getWordCSS(variant: CaptionVariant, isActive: boolean, wasSpoken: boolean, style: CaptionStyle): React.CSSProperties {
   const fs = style.fontSize * 0.28;
-  const base: React.CSSProperties = { fontFamily: "system-ui, sans-serif", display: "inline-block", transition: "all 0.1s ease", fontSize: fs };
+  const base: React.CSSProperties = { fontFamily: fontCss(style.fontFamily), display: "inline-block", transition: "all 0.1s ease", fontSize: fs };
+
+  // Umrandung: aktives Wort wird umrandet statt eingefärbt (spiegelt remotion/Caption.tsx)
+  if ((style.highlightMode ?? "color") === "outline") {
+    const strokeColor = style.strokeColor ?? "#000000";
+    const w = (style.strokeWidth ?? 3) * 0.32;
+    return {
+      ...base,
+      fontWeight: variant === "minimal" ? 600 : variant === "outline" ? 900 : 800,
+      textTransform: variant === "box" || variant === "minimal" ? "none" : "uppercase",
+      letterSpacing: variant === "minimal" ? "0px" : "-0.5px",
+      color: style.color,
+      WebkitTextStroke: `${(isActive ? w + 0.4 : w).toFixed(2)}px ${strokeColor}`,
+      paintOrder: "stroke fill",
+      opacity: wasSpoken ? 0.55 : 1,
+      transform: isActive ? "scale(1.06)" : "scale(1)",
+      background: variant === "box" ? "rgba(0,0,0,0.45)" : undefined,
+      borderRadius: variant === "box" ? 6 : undefined,
+      padding: variant === "box" ? "1px 8px" : undefined,
+      textShadow: variant === "box" ? "none" : "0 1px 4px rgba(0,0,0,0.7)",
+    };
+  }
 
   switch (variant) {
     case "box":

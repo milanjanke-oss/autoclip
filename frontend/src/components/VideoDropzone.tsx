@@ -17,7 +17,11 @@ export const VideoDropzone: React.FC<Props> = ({ onFile, disabled }) => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "video/*": [".mp4", ".mov", ".avi", ".webm", ".m4v"] },
+    accept: {
+      "video/*": [".mp4", ".mov", ".avi", ".webm", ".m4v"],
+      "video/quicktime": [".mov"],
+      "video/mp4": [".mp4", ".m4v"],
+    },
     maxFiles: 1,
     disabled,
   });
@@ -105,12 +109,18 @@ export const VideoDropzone: React.FC<Props> = ({ onFile, disabled }) => {
             transition: "color 0.2s",
           }}
         >
-          {isDragActive ? "Video loslassen..." : "Video ablegen"}
+          {isDragActive
+            ? "Video loslassen..."
+            : <><span className="hidden sm:inline">Video ablegen oder </span><span style={{ color: "var(--accent)" }}>auswählen</span></>
+          }
         </p>
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+        <p className="text-sm sm:hidden" style={{ color: "var(--text-muted)" }}>
+          MP4 · MOV · M4V
+        </p>
+        <p className="text-sm hidden sm:block" style={{ color: "var(--text-muted)" }}>
           oder <span style={{ color: "var(--accent)", fontWeight: 500 }}>Datei auswählen</span>
         </p>
-        <p className="text-xs mt-3 font-mono" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
+        <p className="text-xs mt-3 font-mono hidden sm:block" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
           MP4 · MOV · AVI · WEBM · max. 1 GB
         </p>
       </div>

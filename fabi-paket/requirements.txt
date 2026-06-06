@@ -1,0 +1,5 @@
+rembg[gpu]
+imageio
+imageio-ffmpeg
+Pillow
+numpy

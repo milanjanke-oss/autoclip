@@ -9,6 +9,8 @@ export interface Word {
 
 export type CaptionVariant = "classic" | "box" | "outline" | "minimal" | "neon";
 
+export type HighlightMode = "color" | "outline";
+
 export interface CaptionStyle {
   color: string;
   highlightColor: string;
@@ -16,6 +18,10 @@ export interface CaptionStyle {
   position: "bottom" | "middle" | "top";
   wordsPerChunk: number;
   variant?: CaptionVariant;
+  fontFamily?: string;
+  highlightMode?: HighlightMode;
+  strokeColor?: string;
+  strokeWidth?: number;
 }
 
 export interface CutPoint {

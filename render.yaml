@@ -10,9 +10,11 @@ services:
         value: production
       - key: PORT
         value: 4000
-      - key: OPENAI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
       - key: PEXELS_API_KEY
+        sync: false
+      - key: ACCESS_CODE
         sync: false
       - key: FRONTEND_URL
         sync: false
